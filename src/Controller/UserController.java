@@ -7,16 +7,18 @@ import View.UserDetails;
 
 import javax.swing.*;
 import java.io.File;
+import java.util.ArrayList;
 
 public class UserController {
-    // database file
-    private String databaseFile = "src\\data\\database.txt";
+    // database
     private Database database;
     private Form form;
     private UserDetails userDetails;
 
+
     public UserController(Form form, UserDetails userDetails) {
         this.database = new Database();
+        database.createUserTable();
         this.form = form;
         this.userDetails = userDetails;
 
@@ -35,15 +37,22 @@ public class UserController {
                         JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            
-            this.database.addUser(new User(firstname, lastname));
-            this.database.saveUser(new File(databaseFile));
+
+            User newUser = new User(firstname, lastname);
+            this.database.saveUser(newUser);
             this.form.reset(true);
+        });
+
+        this.userDetails.deleteButton(e -> {
+            int selectedRow = this.userDetails.userTable.getSelectedRow();
+            database.deleteUser(selectedRow);
+            this.userDetails.getUsers(database.loadUsers());
         });
 
         // load users
         this.form.viewUsers(e -> {
-            this.userDetails.getUsers(this.database.loadUsers(new File(databaseFile)));
+            this.userDetails.getUsers(this.database.loadUsers());
         });
+
     }
 }

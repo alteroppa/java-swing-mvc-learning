@@ -1,58 +1,116 @@
 package Model;
 
+import javax.swing.table.DefaultTableModel;
 import java.io.*;
 import java.util.ArrayList;
+
+import java.sql.*;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 
 public class Database {
 
     private ArrayList<User> userArrayList;
 
     public Database() {
-        userArrayList = new ArrayList<>();
-    }
-
-    // adds user to our collection
-    public void addUser(User user) {
-        userArrayList.add(user);
-    }
-
-    // saves user to database file
-    public void saveUser(File file) {
-        try {
-            // user model
-            User user;
-            String save_data = "";
-
-            BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file, true));
-            int i = 0;
-            while( i < userArrayList.size()) {
-                user = userArrayList.get(i);
-                save_data = user.getFirstname() + ", " + user.getLastname();
-                i++;
-            }
-            bufferedWriter.write(save_data);
-            bufferedWriter.newLine();
-            // prevents memory leak
-            bufferedWriter.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     // reads user from database file
-    public Object[] loadUsers(File file) {
-        Object[] objects;
+    public ArrayList<User> loadUsers() {
+        Connection c = null;
+        PreparedStatement stmt = null;
+        ArrayList<User> userList = new ArrayList<>();
         try {
-            BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
-            // each lines to array
-            objects = bufferedReader.lines().toArray();
-            bufferedReader.close();
-            return objects;
-        } catch (IOException e) {
-            e.printStackTrace();
+            Class.forName("org.postgresql.Driver");
+            c = DriverManager
+                    .getConnection("jdbc:postgresql://localhost:5432/",
+                            "postgres", "daa");
+            System.out.println("Opened database successfully");
+            stmt = c.prepareStatement("select * from Users");
+            ResultSet rs=stmt.executeQuery();
+            while (rs.next()){
+                String firstname = rs.getString(1);
+                String lastname = rs.getString(2);
+                userList.add(new User(firstname, lastname));
+            }
+
+            stmt.close();
+            c.close();
+        } catch ( Exception e ) {
+            System.err.println( e.getClass().getName()+": "+ e.getMessage() );
+            System.exit(0);
         }
-        return null;
+        System.out.println("loaded users successfully");
+        return userList;
     }
 
+    public void createUserTable(){
+        Connection c = null;
+        Statement stmt = null;
+        try {
+            Class.forName("org.postgresql.Driver");
+            c = DriverManager
+                    .getConnection("jdbc:postgresql://localhost:5432/",
+                            "postgres", "daa");
+            System.out.println("Opened database successfully");
 
+            stmt = c.createStatement();
+            String sql = "CREATE TABLE IF NOT EXISTS USERS " +
+                    //"(ID STRING PRIMARY KEY  NOT NULL," +
+                    "(FIRSTNAME      TEXT    NOT NULL, " +
+                    " LASTNAME       TEXT    NOT NULL)";
+            stmt.executeUpdate(sql);
+            stmt.close();
+            c.close();
+        } catch ( Exception e ) {
+            System.err.println( e.getClass().getName()+": "+ e.getMessage() );
+            System.exit(0);
+        }
+        System.out.println("Table created successfully");
+    }
+
+    public void saveUser(User user){
+        Connection c = null;
+        PreparedStatement stmt = null;
+        try {
+            Class.forName("org.postgresql.Driver");
+            c = DriverManager
+                    .getConnection("jdbc:postgresql://localhost:5432/",
+                            "postgres", "daa");
+            System.out.println("Opened database successfully");
+            stmt = c.prepareStatement("insert into Users values(?,?)");
+            stmt.setString(1,user.getFirstname());
+            stmt.setString(2,user.getLastname());
+            stmt.executeUpdate();
+            stmt.close();
+            c.close();
+        } catch ( Exception e ) {
+            System.err.println( e.getClass().getName()+": "+ e.getMessage() );
+            System.exit(0);
+        }
+        System.out.println("User saved successfully");
+    }
+    public void deleteUser(int selectedUser) {
+        Connection c = null;
+        PreparedStatement stmt = null;
+        try {
+            Class.forName("org.postgresql.Driver");
+            c = DriverManager
+                    .getConnection("jdbc:postgresql://localhost:5432/",
+                            "postgres", "daa");
+            System.out.println("Opened database successfully");
+            String sql = "DELETE FROM USERS WHERE LASTNAME =?";
+            stmt = c.prepareStatement(sql);
+            stmt.setString(1,this.loadUsers().get(selectedUser).getLastname());
+            stmt.executeUpdate();
+            stmt.close();
+            c.close();
+        } catch ( Exception e ) {
+            System.err.println( e.getClass().getName()+": "+ e.getMessage() );
+            System.exit(0);
+        }
+        System.out.println("deleted user successfully");
+    }
 }
